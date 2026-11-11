@@ -99,6 +99,12 @@ def save_review(path: Path, promo: dict, decision: str, notes: str) -> None:
 		writer.writerow({"timestamp": datetime.now().isoformat(timespec="seconds"), "promo_id": promo.get("promo_id", ""), "decision": decision, "notes": notes})
 
 
+def clear_uploaded_data() -> None:
+	st.session_state.pop("runtime_promos", None)
+	st.session_state.pop("runtime_summary", None)
+	st.session_state["episode_uploader"] = None
+
+
 def main() -> None:
 	st.markdown('<div class="hero"><div class="eyebrow">Editorial review workspace</div><h1>Promo Finder</h1><p class="muted">Explore candidate clips, compare their story beats, and record human review decisions.</p></div>', unsafe_allow_html=True)
 
@@ -106,7 +112,7 @@ def main() -> None:
 		st.header("Library")
 		output_dir = Path(st.text_input("Output folder", "outputs_private"))
 		json_path = output_dir / "promos.json"
-		uploaded_episodes = st.file_uploader("Upload episode .txt files", type=["txt"], accept_multiple_files=True, help="Run the heuristic pipeline in this Streamlit session.")
+		uploaded_episodes = st.file_uploader("Upload episode .txt files", type=["txt"], accept_multiple_files=True, key="episode_uploader", help="Run the heuristic pipeline in this Streamlit session.")
 		if uploaded_episodes and st.button("Run heuristic pipeline", type="primary", use_container_width=True):
 			with st.spinner("Parsing episodes and generating ranked promos..."):
 				try:
@@ -116,6 +122,8 @@ def main() -> None:
 					st.success(f"Processed {run_summary['episodes']} episodes and selected {run_summary['selected']} promos.")
 				except Exception as exc:
 					st.error(f"Heuristic pipeline failed: {exc}")
+		if st.session_state.get("runtime_promos") or uploaded_episodes:
+			st.button("Clear uploaded data", on_click=clear_uploaded_data, use_container_width=True)
 		if st.button("Reload data", use_container_width=True):
 			st.cache_data.clear()
 			st.rerun()
