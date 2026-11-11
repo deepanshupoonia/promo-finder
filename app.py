@@ -30,10 +30,21 @@ def load_promos(path: Path) -> list[dict]:
 	if not path.exists():
 		return []
 	try:
-		data = json.loads(path.read_text(encoding="utf-8"))
-		return data if isinstance(data, list) else []
+		return parse_promos(path.read_bytes(), str(path))
 	except (OSError, json.JSONDecodeError) as exc:
 		st.error(f"Could not read {path}: {exc}")
+		return []
+
+
+def parse_promos(raw: bytes, source: str) -> list[dict]:
+	try:
+		data = json.loads(raw.decode("utf-8"))
+		if not isinstance(data, list):
+			st.error(f"{source} must contain a JSON array of promo candidates.")
+			return []
+		return data
+	except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+		st.error(f"Could not read {source}: {exc}")
 		return []
 
 
@@ -59,16 +70,18 @@ def main() -> None:
 		st.header("Library")
 		output_dir = Path(st.text_input("Output folder", "outputs_private"))
 		json_path = output_dir / "promos.json"
+		uploaded_promos = st.file_uploader("Upload promos.json", type=["json"], help="Use this on Streamlit Cloud, where your local outputs_private folder is unavailable.")
 		if st.button("Reload data", use_container_width=True):
 			st.cache_data.clear()
 			st.rerun()
-		st.caption(f"Reading: `{json_path}`")
+		st.caption(f"Reading: `{json_path}`" if uploaded_promos is None else f"Using uploaded file: `{uploaded_promos.name}`")
 		show_invalid = st.checkbox("Include invalid candidates", value=False)
 
-	promos = load_promos(json_path)
+	promos = parse_promos(uploaded_promos.getvalue(), uploaded_promos.name) if uploaded_promos is not None else load_promos(json_path)
 	if not promos:
-		st.warning("No promo data found. Run the pipeline first, then reload this page.")
+		st.warning("No promo data found. Run the pipeline locally, then upload outputs_private/promos.json here.")
 		st.code("python -m promo_finder run --input input_pack --out outputs_private --judge none", language="powershell")
+		st.info("On Streamlit Cloud, input_pack and outputs_private are not available unless you explicitly deploy them. Keep confidential screenplay files private and upload only the generated promos.json.")
 		return
 
 	valid_promos = [promo for promo in promos if promo.get("validation_status") == "valid"]
