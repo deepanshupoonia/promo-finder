@@ -106,7 +106,6 @@ def main() -> None:
 		st.header("Library")
 		output_dir = Path(st.text_input("Output folder", "outputs_private"))
 		json_path = output_dir / "promos.json"
-		uploaded_promos = st.file_uploader("Upload promos.json", type=["json"], help="Use this on Streamlit Cloud, where your local outputs_private folder is unavailable.")
 		uploaded_episodes = st.file_uploader("Upload episode .txt files", type=["txt"], accept_multiple_files=True, help="Run the heuristic pipeline in this Streamlit session.")
 		if uploaded_episodes and st.button("Run heuristic pipeline", type="primary", use_container_width=True):
 			with st.spinner("Parsing episodes and generating ranked promos..."):
@@ -120,12 +119,12 @@ def main() -> None:
 		if st.button("Reload data", use_container_width=True):
 			st.cache_data.clear()
 			st.rerun()
-		st.caption("Using in-session heuristic results" if st.session_state.get("runtime_promos") else (f"Reading: `{json_path}`" if uploaded_promos is None else f"Using uploaded file: `{uploaded_promos.name}`"))
+		st.caption("Using in-session heuristic results" if st.session_state.get("runtime_promos") else f"Reading: `{json_path}`")
 		show_invalid = st.checkbox("Include invalid candidates", value=False)
 
-	promos = st.session_state.get("runtime_promos") or (parse_promos(uploaded_promos.getvalue(), uploaded_promos.name) if uploaded_promos is not None else load_promos(json_path))
+	promos = st.session_state.get("runtime_promos") or load_promos(json_path)
 	if not promos:
-		st.warning("No promo data found. Upload episode .txt files and run the heuristic pipeline, or upload an existing promos.json.")
+		st.warning("No promo data found. Upload episode .txt files and run the heuristic pipeline.")
 		st.code("python -m promo_finder run --input input_pack --out outputs_private --judge none", language="powershell")
 		return
 
