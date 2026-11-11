@@ -1,9 +1,18 @@
 import csv
 import json
+import tempfile
 from datetime import datetime
 from pathlib import Path
+from dataclasses import asdict
 
 import streamlit as st
+
+from promo_finder.candidates import generate_candidates
+from promo_finder.config import load_config
+from promo_finder.models import PromoCandidate
+from promo_finder.parser import parse_folder
+from promo_finder.ranking import rank_candidates
+from promo_finder.validate import validate_candidate
 
 
 st.set_page_config(page_title="Promo Finder", page_icon="PF", layout="wide", initial_sidebar_state="expanded")
@@ -48,6 +57,33 @@ def parse_promos(raw: bytes, source: str) -> list[dict]:
 		return []
 
 
+def run_uploaded_heuristic(uploaded_files) -> tuple[list[dict], dict]:
+	with tempfile.TemporaryDirectory(prefix="promo_finder_") as temporary_folder:
+		input_folder = Path(temporary_folder)
+		for uploaded_file in uploaded_files:
+			(input_folder / Path(uploaded_file.name).name).write_bytes(uploaded_file.getvalue())
+		episodes, parser_warnings = parse_folder(input_folder)
+		config = load_config("config.yaml")
+		candidates = generate_candidates(episodes, config)
+		episode_map = {episode.episode_id: episode for episode in episodes}
+		for candidate in candidates:
+			validate_candidate(candidate, episode_map, config)
+		selected, suppressed = rank_candidates(candidates, config)
+		for rank, candidate in enumerate(selected, start=1):
+			candidate.rank = rank
+		summary = {
+			"episodes": len(episodes),
+			"scenes": sum(len(episode.scenes) for episode in episodes),
+			"events": sum(len(episode.events) for episode in episodes),
+			"candidates": len(candidates),
+			"valid_candidates": sum(candidate.validation_status == "valid" for candidate in candidates),
+			"selected": len(selected),
+			"suppressed": len(suppressed),
+			"warnings": parser_warnings,
+		}
+		return [asdict(candidate) for candidate in selected], summary
+
+
 def format_time(seconds: float) -> str:
 	minutes, remainder = divmod(float(seconds), 60)
 	return f"{int(minutes):02d}:{remainder:05.2f}"
@@ -71,17 +107,26 @@ def main() -> None:
 		output_dir = Path(st.text_input("Output folder", "outputs_private"))
 		json_path = output_dir / "promos.json"
 		uploaded_promos = st.file_uploader("Upload promos.json", type=["json"], help="Use this on Streamlit Cloud, where your local outputs_private folder is unavailable.")
+		uploaded_episodes = st.file_uploader("Upload episode .txt files", type=["txt"], accept_multiple_files=True, help="Run the heuristic pipeline in this Streamlit session.")
+		if uploaded_episodes and st.button("Run heuristic pipeline", type="primary", use_container_width=True):
+			with st.spinner("Parsing episodes and generating ranked promos..."):
+				try:
+					results, run_summary = run_uploaded_heuristic(uploaded_episodes)
+					st.session_state["runtime_promos"] = results
+					st.session_state["runtime_summary"] = run_summary
+					st.success(f"Processed {run_summary['episodes']} episodes and selected {run_summary['selected']} promos.")
+				except Exception as exc:
+					st.error(f"Heuristic pipeline failed: {exc}")
 		if st.button("Reload data", use_container_width=True):
 			st.cache_data.clear()
 			st.rerun()
-		st.caption(f"Reading: `{json_path}`" if uploaded_promos is None else f"Using uploaded file: `{uploaded_promos.name}`")
+		st.caption("Using in-session heuristic results" if st.session_state.get("runtime_promos") else (f"Reading: `{json_path}`" if uploaded_promos is None else f"Using uploaded file: `{uploaded_promos.name}`"))
 		show_invalid = st.checkbox("Include invalid candidates", value=False)
 
-	promos = parse_promos(uploaded_promos.getvalue(), uploaded_promos.name) if uploaded_promos is not None else load_promos(json_path)
+	promos = st.session_state.get("runtime_promos") or (parse_promos(uploaded_promos.getvalue(), uploaded_promos.name) if uploaded_promos is not None else load_promos(json_path))
 	if not promos:
-		st.warning("No promo data found. Run the pipeline locally, then upload outputs_private/promos.json here.")
+		st.warning("No promo data found. Upload episode .txt files and run the heuristic pipeline, or upload an existing promos.json.")
 		st.code("python -m promo_finder run --input input_pack --out outputs_private --judge none", language="powershell")
-		st.info("On Streamlit Cloud, input_pack and outputs_private are not available unless you explicitly deploy them. Keep confidential screenplay files private and upload only the generated promos.json.")
 		return
 
 	valid_promos = [promo for promo in promos if promo.get("validation_status") == "valid"]
