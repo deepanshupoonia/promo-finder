@@ -1,0 +1,17 @@
+min_duration: 20
+max_duration: 60
+min_segment_duration: 4
+max_segments: 3
+hard_max_segments: 4
+min_same_episode_gap: 0.5
+spoken_unit_gap: 2.0
+hook_window: 3
+cliffhanger_window: 4
+max_episode_span: 5
+beam_width: 200
+max_hook_moments_per_episode: 25
+max_cliff_moments_per_episode: 25
+max_gemini_candidates: 40
+llm_weight: 0.5
+minimum_final_score: 0.40
+default_judge: none

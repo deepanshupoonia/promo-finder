@@ -1,0 +1,36 @@
+{
+  "input_episode_count": 50,
+  "processed_episode_count": 50,
+  "candidate_count": 7026,
+  "valid_count": 1781,
+  "selected_count": 86,
+  "gemini_calls": 32,
+  "gemini_fallbacks": 3,
+  "cache_hits": 8,
+  "gemini_warnings": [
+    "3c7730090d: Expecting value: line 9 column 5 (char 776)",
+    "d8648cb05b: Expecting property name enclosed in double quotes: line 8 column 1 (char 729)",
+    "eb62e4d87e: Expecting property name enclosed in double quotes: line 8 column 1 (char 557)"
+  ],
+  "runtime_seconds": 63.25,
+  "configuration": {
+    "min_duration": 20,
+    "max_duration": 60,
+    "min_segment_duration": 4,
+    "max_segments": 3,
+    "hard_max_segments": 4,
+    "min_same_episode_gap": 0.5,
+    "spoken_unit_gap": 2.0,
+    "hook_window": 3,
+    "cliffhanger_window": 4,
+    "max_episode_span": 5,
+    "beam_width": 200,
+    "max_hook_moments_per_episode": 25,
+    "max_cliff_moments_per_episode": 25,
+    "max_gemini_candidates": 40,
+    "llm_weight": 0.5,
+    "minimum_final_score": 0.4,
+    "default_judge": "none"
+  },
+  "software_version": "1.0.0"
+}

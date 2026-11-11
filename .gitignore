@@ -1,0 +1,8 @@
+input_pack/
+outputs_private/
+.cache/
+.env
+.venv/
+**pycache**/
+.pytest_cache/
+*.pyc
