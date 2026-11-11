@@ -102,7 +102,7 @@ def save_review(path: Path, promo: dict, decision: str, notes: str) -> None:
 def clear_uploaded_data() -> None:
 	st.session_state.pop("runtime_promos", None)
 	st.session_state.pop("runtime_summary", None)
-	st.session_state["episode_uploader"] = None
+	st.session_state["uploader_reset"] = st.session_state.get("uploader_reset", 0) + 1
 
 
 def main() -> None:
@@ -112,7 +112,8 @@ def main() -> None:
 		st.header("Library")
 		output_dir = Path(st.text_input("Output folder", "outputs_private"))
 		json_path = output_dir / "promos.json"
-		uploaded_episodes = st.file_uploader("Upload episode .txt files", type=["txt"], accept_multiple_files=True, key="episode_uploader", help="Run the heuristic pipeline in this Streamlit session.")
+		uploader_key = f"episode_uploader_{st.session_state.get('uploader_reset', 0)}"
+		uploaded_episodes = st.file_uploader("Upload episode .txt files", type=["txt"], accept_multiple_files=True, key=uploader_key, help="Run the heuristic pipeline in this Streamlit session.")
 		if uploaded_episodes and st.button("Run heuristic pipeline", type="primary", use_container_width=True):
 			with st.spinner("Parsing episodes and generating ranked promos..."):
 				try:
