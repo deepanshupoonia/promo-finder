@@ -5,7 +5,9 @@ This guide explains how to run every project mode from a clean Windows PowerShel
 ## 1. Open the project
 
 ```powershell
-cd C:\Users\deepanshu\Desktop\promo-finder
+
+cd ...........
+
 ```
 
 The confidential screenplay files must remain inside `input_pack/`. Do not upload or publish that folder.
@@ -13,37 +15,29 @@ The confidential screenplay files must remain inside `input_pack/`. Do not uploa
 ## 2. Create and activate a virtual environment
 
 ```powershell
+
+
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
+
+
 ```
 
 If PowerShell blocks activation, run the project with `.venv\Scripts\python.exe` directly instead.
 
-## 3. Configure Gemini only when needed
 
-Create `.env` from `.env.example`:
-
-```powershell
-Copy-Item .env.example .env
-```
-
-Open `.env` and set:
-
-```env
-GEMINI_API_KEY=replace_with_a_new_key
-GEMINI_MODEL=gemini-3.5-flash-lite
-```
-
-The API key is not used by heuristic mode. It is loaded only when `--judge gemini` is selected. Never commit `.env` or print its contents. Rotate a key if it has been exposed.
-
-## 4. Heuristic mode: no API, recommended first run
+## 3. Heuristic mode:
 
 This mode is deterministic and works offline after dependencies are installed.
 
 ```powershell
+
+
 python -m promo_finder run --input input_pack --out outputs_private --judge none
+
+
 ```
 
 Expected behavior:
@@ -53,80 +47,50 @@ Expected behavior:
 - Writes the full candidate and ranking outputs into `outputs_private/`.
 - Reports runtime and candidate counts.
 
-## 5. Gemini smoke test
 
-Run one Gemini candidate first. This checks the API configuration without evaluating the full 40-candidate allowance.
-
-```powershell
-python -m promo_finder run --input input_pack --out outputs_private_gemini_smoke --judge gemini --max-gemini-candidates 1
-```
-
-Check `run_summary.json`:
-
-- `gemini_calls > 0` means a live API request was made.
-- `cache_hits > 0` means a previous result was reused.
-- `gemini_fallbacks > 0` means the candidate fell back to heuristic scoring.
-- `gemini_warnings` contains the exact error if evaluation failed.
-
-A successful cached smoke test can show `gemini_calls: 0` and `cache_hits: 1`; that is expected and means no new API request was needed.
-
-## 6. Full Gemini mode
-
-After the smoke test succeeds:
+## 4. Validate generated output
 
 ```powershell
-python -m promo_finder run --input input_pack --out outputs_private_gemini --judge gemini
-```
 
-The configured maximum is 40 candidates. Cache files are stored under `.cache/gemini/`. The parser and hard validation rules remain authoritative; Gemini cannot change timestamps or approve invalid candidates.
 
-If the command exits with status 2, inspect:
-
-```powershell
-Get-Content outputs_private_gemini\warnings.json
-Get-Content outputs_private_gemini\run_summary.json
-```
-
-Common causes are an invalid key, unavailable model name, quota exhaustion, network failure, or missing `google-genai` installation.
-
-## 7. Validate generated output
-
-```powershell
 python -m promo_finder validate outputs_private\promos.json
+
+
 ```
 
 The raw JSON contains every generated candidate. Invalid candidates are retained for auditability and are not selected in the final ranked list.
 
-## 8. Evaluate against human-reviewed data
 
-When a compatible `gold.json` exists:
-
-```powershell
-python -m promo_finder eval --gold gold.json --out outputs_private
-```
-
-This writes `evaluation.json`. Without gold or review data, precision and recall must not be claimed.
-
-No gold file is included because the supplied task did not provide human-reviewed reference data. Use `gold.example.json` as a schema example, replace its example record with real reviewed moments, save it as `gold.json`, and then run the command above.
-
-## 9. Run automated tests
+## 5. Run automated tests
 
 ```powershell
+
+
 python -m pytest -q
+
+
 ```
 
-## 10. Launch the Streamlit UI
+## 6. Launch the Streamlit UI
 
 The UI reads `outputs_private/promos.json` and does not require PostgreSQL.
 
 ```powershell
+
+
 python -m streamlit run app.py
+
+
 ```
 
 Open the displayed address, usually:
 
 ```text
+
+
 http://localhost:8501
+
+
 ```
 
 The dashboard lets you:
@@ -161,6 +125,11 @@ Open these files after a run:
 
 ## End-to-end command sequence
 
+
+
+
+
+## Overall Process in simple words
 ```powershell
 cd C:\Users\deepanshu\Desktop\promo-finder
 .\.venv\Scripts\Activate.ps1
